@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ChangeEvent } from "react";
-import { ArrowUpDown, Download, Filter } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, MouseEvent } from "react";
+import { ArrowUpDown, Check, Copy, Download, Filter } from "lucide-react";
 import type { PNode } from "@/types/pnode";
 import { abbreviateKey, formatDuration, formatPercent, formatRelativeTimeFromSeconds } from "@/lib/format";
 import { PNodeDrawer } from "./PNodeDrawer";
@@ -28,6 +28,16 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
   const [selectedNode, setSelectedNode] = useState<PNode | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const versions = useMemo(() => Array.from(new Set(nodes.map((node) => node.version))).sort(), [nodes]);
 
@@ -71,6 +81,25 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
   const showingTo = Math.min(pageStart + pageSize, totalRows);
   const canPrev = currentPage > 1;
   const canNext = currentPage < pageCount;
+
+  const handleCopy = async (value: string, id: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedId(id);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error("Unable to copy value", error);
+    }
+  };
+
+  const handleCopyClick = (event: MouseEvent, value: string, id: string) => {
+    event.stopPropagation();
+    handleCopy(value, id);
+  };
 
   const handleSortChange = (key: SortKey) => {
     if (sortKey === key) {
@@ -244,9 +273,39 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
                 }}
                 className="grid cursor-pointer grid-cols-[2.2fr_repeat(6,minmax(120px,1fr))] items-center gap-4 py-4 text-sm text-slate-100 transition hover:bg-white/5 focus:outline focus:outline-emerald-400/40"
               >
-                <div>
-                  <p className="font-mono text-base text-white">{abbreviateKey(node.pubkey, 6)}</p>
-                  <p className="text-xs text-slate-500">{node.address ?? "private"}</p>
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={(event) => handleCopyClick(event, node.pubkey, `pubkey-${node.pubkey}`)}
+                    className="group flex items-center gap-2 text-left focus:outline-none"
+                    aria-label="Copy public key"
+                  >
+                    <span className="font-mono text-base text-white">{abbreviateKey(node.pubkey, 6)}</span>
+                    <span className="text-xs text-slate-500">
+                      {copiedId === `pubkey-${node.pubkey}` ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-300" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5 text-slate-500 transition group-hover:text-white" />
+                      )}
+                    </span>
+                  </button>
+                  {node.address ? (
+                    <button
+                      type="button"
+                      onClick={(event) => handleCopyClick(event, node.address ?? "", `address-${node.pubkey}`)}
+                      className="group inline-flex items-center gap-2 text-left text-xs text-slate-500 focus:outline-none"
+                      aria-label="Copy node address"
+                    >
+                      <span>{node.address}</span>
+                      {copiedId === `address-${node.pubkey}` ? (
+                        <Check className="h-3 w-3 text-emerald-300" />
+                      ) : (
+                        <Copy className="h-3 w-3 text-slate-500 transition group-hover:text-white" />
+                      )}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-slate-500">private</p>
+                  )}
                 </div>
                 <HealthBadge score={node.healthScore} status={node.status} />
                 <span className="text-xs uppercase tracking-[0.2em] text-slate-400">{node.isPublic ? "Public" : "Private"}</span>
