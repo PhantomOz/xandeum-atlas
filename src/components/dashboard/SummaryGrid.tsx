@@ -38,11 +38,11 @@ export function SummaryGrid({ metrics }: SummaryGridProps) {
   ];
 
   return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
         <article
           key={card.label}
-          className="rounded-2xl border border-white/5 bg-slate-900/40 p-5 shadow-inner shadow-black/20"
+          className="rounded-[26px] border border-white/5 bg-slate-900/45 p-6 shadow-inner shadow-black/25"
         >
           <div className={`mb-4 h-1.5 w-16 rounded-full bg-gradient-to-r ${card.accent}`} />
           <p className="text-sm uppercase tracking-[0.2em] text-slate-400">{card.label}</p>

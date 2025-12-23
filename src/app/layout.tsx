@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     description: "Monitor pNode health, releases, and capacity in real-time",
     type: "website",
   },
+  icons: {
+    icon: "/xandeum-logo.svg",
+    shortcut: "/xandeum-logo.svg",
+    apple: "/xandeum-logo.svg",
+  },
 };
 
 export default function RootLayout({

@@ -40,23 +40,32 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
   const lastUpdated = new Date(snapshot.fetchedAt).toLocaleString();
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <div className="space-y-10">
+      <header className="grid gap-8 lg:grid-cols-[3fr_minmax(0,1.4fr)] xl:gap-12">
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Xandeum Atlas</p>
-          <h1 className="mt-2 text-4xl font-semibold leading-tight text-white">pNode Intelligence Canvas</h1>
-          <p className="mt-3 max-w-2xl text-base text-slate-300">
+          <p className="text-xs uppercase tracking-[0.45em] text-emerald-300">Xandeum Atlas</p>
+          <h1 className="mt-3 text-4xl font-semibold leading-tight text-white lg:text-[44px]">pNode Intelligence Canvas</h1>
+          <p className="mt-4 max-w-3xl text-base text-slate-300">
             Live visibility into storage provider gossip: version adoption, health posture, and capacity distribution.
           </p>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-400">
-            <span className="inline-flex items-center gap-2">
-              <Satellite className="h-4 w-4 text-emerald-300" /> Responding seed {snapshot.seed}
-            </span>
-            <span>Discovery list {seedPreference ? seedPreference : "default rotation"}</span>
-            <span>Updated {lastUpdated}</span>
+          <div className="mt-6 grid gap-4 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-2xl border border-white/5 bg-slate-950/40 px-4 py-3">
+              <span className="flex items-center gap-2 text-xs uppercase tracking-[0.35em] text-slate-500">
+                <Satellite className="h-3.5 w-3.5 text-emerald-300" /> Seed
+              </span>
+              <p className="mt-1 font-mono text-sm text-white">{snapshot.seed}</p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-slate-950/40 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Discovery list</p>
+              <p className="mt-1 text-sm text-white">{seedPreference ? seedPreference : "Default rotation"}</p>
+            </div>
+            <div className="rounded-2xl border border-white/5 bg-slate-950/40 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Last synced</p>
+              <p className="mt-1 text-sm text-white">{lastUpdated}</p>
+            </div>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-end lg:w-auto lg:flex-col">
+        <div className="flex flex-col gap-4 lg:items-stretch">
           <SeedControls
             discoveryList={seedPreference}
             respondingSeed={snapshot.seed}
@@ -66,11 +75,13 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
           />
           <button
             onClick={() => refresh()}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white hover:border-white/40"
+            className="h-12 rounded-2xl border border-white/10 bg-slate-900/40 text-sm font-semibold text-white transition hover:border-white/40 disabled:opacity-60"
             disabled={isRefreshing}
           >
-            <RefreshCcw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            {isRefreshing ? "Refreshing" : "Refresh"}
+            <span className="inline-flex w-full items-center justify-center gap-2">
+              <RefreshCcw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? "Refreshing" : "Refresh snapshot"}
+            </span>
           </button>
         </div>
       </header>

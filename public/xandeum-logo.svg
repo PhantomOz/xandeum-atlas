@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad-teal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#31d6c8" />
+      <stop offset="100%" stop-color="#0f9f95" />
+    </linearGradient>
+    <linearGradient id="grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffca2b" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+    <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#9333ea" />
+    </linearGradient>
+  </defs>
+  <g fill-rule="evenodd" clip-rule="evenodd">
+    <path fill="url(#grad-teal)" d="M68 108h166l108 108H176z" />
+    <path fill="url(#grad-orange)" d="M68 404h166l108-108H176z" />
+    <path fill="url(#grad-orange)" d="M444 108H278L170 216h166z" />
+    <path fill="url(#grad-teal)" d="M444 404H278L170 296h166z" />
+    <path fill="url(#grad-purple)" d="M188 196l68-68 68 68 68 68-68 68-68 68-68-68-68-68z" />
+  </g>
+</svg>
