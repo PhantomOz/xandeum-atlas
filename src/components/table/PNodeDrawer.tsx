@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipboardCheck, ClipboardCopy, Globe, Shield } from "lucide-react";
 import type { PNode } from "@/types/pnode";
 import { formatBytes, formatDuration, formatPercent, formatRelativeTimeFromSeconds } from "@/lib/format";
@@ -12,6 +12,16 @@ interface PNodeDrawerProps {
 
 export function PNodeDrawer({ node, onClose }: PNodeDrawerProps) {
   const [copied, setCopied] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (node && panelRef.current) {
+      panelRef.current.scrollTo({ top: 0, behavior: "auto" });
+    }
+    if (node && typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [node]);
 
   if (!node) {
     return null;
@@ -30,7 +40,7 @@ export function PNodeDrawer({ node, onClose }: PNodeDrawerProps) {
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <aside className="absolute inset-y-0 right-0 w-full max-w-lg overflow-y-auto border-l border-white/10 bg-slate-950/95 p-6 text-white shadow-[0_0_40px_rgba(0,0,0,0.6)]">
+      <aside ref={panelRef} className="absolute inset-y-0 right-0 w-full max-w-lg overflow-y-auto border-l border-white/10 bg-slate-950/95 p-6 text-white shadow-[0_0_40px_rgba(0,0,0,0.6)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Node detail</p>
