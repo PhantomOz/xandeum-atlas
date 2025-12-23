@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Xandeum pNode Atlas
 
-## Getting Started
+Live analytics for the Xandeum pNode network. The dashboard ingests gossip data directly from pNodes via pRPC (`get-pods-with-stats`) and visualises health, storage utilisation, release adoption, and node-level telemetry.
 
-First, run the development server:
+### Features
+
+- Seed-aware pRPC client with automatic retry + caching
+- Aggregated metrics (uptime, storage, status mix, release histogram)
+- Searchable/filterable node directory with CSV/JSON export
+- Version distribution + storage band insights + top storage providers
+- Auto-refresh (30s) with manual override
+- In-app seed override panel to target any custom gossip scouts
+- Slide-over inspector per node with raw JSON export
+
+### Getting Started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit http://localhost:3000 to view the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Optional `.env.local` (values shown are defaults):
 
-## Learn More
+```
+PNODE_SEEDS=173.212.220.65,161.97.97.41,192.190.136.36,192.190.136.38,207.244.255.1,192.190.136.28,192.190.136.29,173.212.203.145
+PNODE_RPC_PORT=6000
+PNODE_CACHE_TTL=25000           # ms
+PNODE_REQUEST_TIMEOUT=7000      # ms
+PNODE_STALE_SECONDS=1800        # mark nodes stale after 30 min
+```
 
-To learn more about Next.js, take a look at the following resources:
+You can point the app at custom seeds (IP or hostnames) either via the `.env` above or through the "Discovery list" control in the UI (comma-separated). The server-side fetcher will try `get-pods-with-stats`, fall back to `get-pods`, deduplicate nodes by pubkey, and cache the snapshot for `PNODE_CACHE_TTL` ms per discovery list.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `pnpm dev` – run the Next.js dev server
+- `pnpm build && pnpm start` – production build + serve
+- `pnpm lint` – lint the codebase
 
-## Deploy on Vercel
+### Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Any Node 18+ target works (Vercel, Netlify, self-hosted). Ensure outbound access to your chosen pNode seeds over HTTP/6000 and configure the environment variables above.
