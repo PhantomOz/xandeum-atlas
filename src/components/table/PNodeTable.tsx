@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import { ArrowUpDown, Download, Filter } from "lucide-react";
 import type { PNode } from "@/types/pnode";
 import { abbreviateKey, formatDuration, formatPercent, formatRelativeTimeFromSeconds } from "@/lib/format";
@@ -15,6 +16,8 @@ type SortKey = "health" | "uptime" | "usage" | "lastSeen";
 type StatusFilter = "all" | "healthy" | "warning" | "critical";
 type ExposureFilter = "all" | "public" | "private";
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -23,6 +26,8 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("health");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selectedNode, setSelectedNode] = useState<PNode | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
 
   const versions = useMemo(() => Array.from(new Set(nodes.map((node) => node.version))).sort(), [nodes]);
 
@@ -57,6 +62,16 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
       });
   }, [nodes, search, statusFilter, exposureFilter, versionFilter, sortDir, sortKey]);
 
+  const totalRows = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * pageSize;
+  const paginatedNodes = filtered.slice(pageStart, pageStart + pageSize);
+  const showingFrom = totalRows === 0 ? 0 : pageStart + 1;
+  const showingTo = Math.min(pageStart + pageSize, totalRows);
+  const canPrev = currentPage > 1;
+  const canNext = currentPage < pageCount;
+
   const handleSortChange = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -64,6 +79,7 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
       setSortKey(key);
       setSortDir("desc");
     }
+    setPage(1);
   };
 
   const openDrawer = (node: PNode) => {
@@ -104,6 +120,11 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setPageSize(Number(event.target.value));
+    setPage(1);
+  };
+
   return (
     <section className="space-y-4 rounded-3xl border border-white/5 bg-slate-950/60 p-5 shadow-2xl shadow-black/30">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -122,7 +143,7 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
         </div>
       </header>
 
-      <div className="grid gap-3 rounded-2xl border border-white/5 bg-slate-900/40 p-4">
+      <div className="space-y-3 rounded-2xl border border-white/5 bg-slate-900/40 p-4">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/40 px-3 py-2 text-sm text-slate-300">
             <Filter className="h-4 w-4 text-slate-500" />
@@ -130,13 +151,19 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
               className="w-full bg-transparent text-slate-100 placeholder:text-slate-500 focus:outline-none"
               placeholder="Search pubkey or address"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
             />
           </label>
           <select
             className="rounded-2xl border border-white/5 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            onChange={(event) => {
+              setStatusFilter(event.target.value as StatusFilter);
+              setPage(1);
+            }}
           >
             <option value="all">Any status</option>
             <option value="healthy">Healthy</option>
@@ -146,13 +173,23 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
           <select
             className="rounded-2xl border border-white/5 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
             value={exposureFilter}
-            onChange={(event) => setExposureFilter(event.target.value as ExposureFilter)}
+            onChange={(event) => {
+              setExposureFilter(event.target.value as ExposureFilter);
+              setPage(1);
+            }}
           >
             <option value="all">Exposure: All</option>
             <option value="public">Public</option>
             <option value="private">Private</option>
           </select>
-          <select className="rounded-2xl border border-white/5 bg-slate-950/40 px-3 py-2 text-sm text-slate-300" value={versionFilter} onChange={(event) => setVersionFilter(event.target.value)}>
+          <select
+            className="rounded-2xl border border-white/5 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
+            value={versionFilter}
+            onChange={(event) => {
+              setVersionFilter(event.target.value);
+              setPage(1);
+            }}
+          >
             <option value="all">Version: Any</option>
             {versions.map((version) => (
               <option key={version} value={version}>
@@ -160,6 +197,25 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
               </option>
             ))}
           </select>
+        </div>
+        <div className="flex flex-col gap-3 rounded-2xl border border-white/5 bg-slate-950/30 px-4 py-3 text-sm text-slate-300 md:flex-row md:items-center md:justify-between">
+          <p>
+            {totalRows === 0 ? "No nodes match the current filters" : `Showing ${showingFrom}-${showingTo} of ${totalRows} nodes`}
+          </p>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400">
+            Rows per page
+            <select
+              className="rounded-2xl border border-white/10 bg-slate-900/60 px-3 py-1 text-sm text-slate-100"
+              value={pageSize}
+              onChange={handlePageSizeChange}
+            >
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
@@ -175,7 +231,7 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
             <SortButton label="Last Seen" active={sortKey === "lastSeen"} onSort={() => handleSortChange("lastSeen")} />
           </div>
           <div className="divide-y divide-white/5">
-            {filtered.map((node) => (
+            {paginatedNodes.map((node) => (
               <article
                 key={node.pubkey}
                 role="button"
@@ -209,6 +265,29 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
               </article>
             ))}
           </div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 border-t border-white/5 pt-4 text-sm text-slate-300 md:flex-row md:items-center md:justify-between">
+        <p>
+          Page {currentPage} of {pageCount}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage(Math.max(currentPage - 1, 1))}
+            disabled={!canPrev}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage(Math.min(currentPage + 1, pageCount))}
+            disabled={!canNext}
+            className="rounded-full border border-white/10 px-4 py-2 text-sm text-white disabled:opacity-40"
+          >
+            Next
+          </button>
         </div>
       </div>
       <PNodeDrawer node={selectedNode} onClose={closeDrawer} />
