@@ -1,4 +1,4 @@
-import { BellRing, BookOpen, LayoutPanelLeft } from "lucide-react";
+import { BellRing, BookOpen, Code, LayoutPanelLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -41,6 +41,13 @@ export function AppShell({ children }: AppShellProps) {
                   >
                     <BookOpen className="h-3.5 w-3.5 text-emerald-300" />
                     Guide
+                  </Link>
+                  <Link
+                    href="/docs/export-api"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold uppercase tracking-[0.35em] text-white transition hover:border-emerald-400"
+                  >
+                    <Code className="h-3.5 w-3.5 text-emerald-300" />
+                    API Docs
                   </Link>
                   <Link
                     href="/embed/summary"

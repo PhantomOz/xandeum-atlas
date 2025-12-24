@@ -1,0 +1,350 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Xandeum Atlas API",
+    "version": "2025.12.24",
+    "description": "Export analytics, manage alert webhooks, and explore embeddable endpoints for the Xandeum pNode Atlas."
+  },
+  "servers": [
+    {
+      "url": "{protocol}://{host}",
+      "description": "Current deployment",
+      "variables": {
+        "protocol": {
+          "default": "https"
+        },
+        "host": {
+          "default": "atlas.example.com"
+        }
+      }
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "AtlasToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Atlas-Token",
+        "description": "Optional shared secret that gates access to public export routes."
+      },
+      "AlertUser": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-alert-user",
+        "description": "Tenant token used to manage personal alert webhooks."
+      }
+    },
+    "schemas": {
+      "SummaryResponse": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "string", "example": "2025.12.24" },
+          "generatedAt": { "type": "string", "format": "date-time" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalNodes": { "type": "integer", "example": 412 },
+              "publicNodes": { "type": "integer", "example": 260 },
+              "privateNodes": { "type": "integer", "example": 152 },
+              "healthy": { "type": "integer", "example": 300 },
+              "warning": { "type": "integer", "example": 72 },
+              "critical": { "type": "integer", "example": 40 },
+              "avgUsagePercent": { "type": "number", "format": "float", "example": 47.8 },
+              "committedTb": { "type": "number", "format": "float", "example": 165.4 },
+              "usedTb": { "type": "number", "format": "float", "example": 78.2 },
+              "latestVersion": { "type": "string", "example": "0.19.4" },
+              "stale": { "type": "integer", "example": 15 }
+            }
+          }
+        }
+      },
+      "HistoryPoint": {
+        "type": "object",
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" },
+          "totalNodes": { "type": "integer" },
+          "healthy": { "type": "integer" },
+          "critical": { "type": "integer" },
+          "avgUsagePercent": { "type": "number", "format": "float" }
+        }
+      },
+      "HistoryResponse": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "string" },
+          "generatedAt": { "type": "string", "format": "date-time" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "interval": { "type": "string", "example": "6h" },
+              "points": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/HistoryPoint" }
+              }
+            }
+          }
+        }
+      },
+      "NodeEntry": {
+        "type": "object",
+        "properties": {
+          "pubkey": { "type": "string" },
+          "status": { "type": "string", "enum": ["healthy", "warning", "critical"] },
+          "uptimeHours": { "type": "number" },
+          "storageUsagePercent": { "type": "number" },
+          "storageCommitted": { "type": "number" },
+          "storageUsed": { "type": "number" },
+          "isPublic": { "type": "boolean" },
+          "lastSeen": { "type": "string", "format": "date-time" },
+          "version": { "type": "string" }
+        }
+      },
+      "NodesResponse": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "string" },
+          "generatedAt": { "type": "string", "format": "date-time" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/NodeEntry" }
+              },
+              "nextCursor": { "type": ["string", "null"] }
+            }
+          }
+        }
+      },
+      "AlertWebhook": {
+        "type": "object",
+        "required": ["id", "url", "triggers"],
+        "properties": {
+          "id": { "type": "string", "example": "pagerduty" },
+          "label": { "type": "string", "example": "PagerDuty" },
+          "url": { "type": "string", "format": "uri" },
+          "secret": { "type": "string" },
+          "isEnabled": { "type": "boolean", "default": true },
+          "triggers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "percent"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["totalNodesDrop", "healthyPercentBelow", "criticalPercentAbove", "avgUsagePercentAbove"]
+                },
+                "percent": { "type": "number", "format": "float" },
+                "cooldownMinutes": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        }
+      },
+      "AlertWebhookList": {
+        "type": "object",
+        "properties": {
+          "webhooks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AlertWebhook" }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/export/summary": {
+      "get": {
+        "summary": "Fetch current network summary",
+        "tags": ["Export"],
+        "security": [{ "AtlasToken": [] }],
+        "responses": {
+          "200": {
+            "description": "Summary payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SummaryResponse" }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid token" },
+          "503": { "description": "Snapshot unavailable" }
+        }
+      }
+    },
+    "/api/export/history": {
+      "get": {
+        "summary": "Fetch downsampled history",
+        "tags": ["Export"],
+        "security": [{ "AtlasToken": [] }],
+        "parameters": [
+          {
+            "name": "interval",
+            "in": "query",
+            "description": "Aggregation window (1h, 6h, 24h)",
+            "schema": { "type": "string", "enum": ["1h", "6h", "24h"], "default": "1h" }
+          },
+          {
+            "name": "points",
+            "in": "query",
+            "description": "Number of samples returned",
+            "schema": { "type": "integer", "minimum": 12, "maximum": 168, "default": 48 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History payload",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HistoryResponse" }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid token" }
+        }
+      }
+    },
+    "/api/export/nodes": {
+      "get": {
+        "summary": "Fetch node directory snapshot",
+        "tags": ["Export"],
+        "security": [{ "AtlasToken": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["healthy", "warning", "critical", "all"], "default": "all" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 10, "maximum": 500, "default": 50 }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Opaque pagination token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated nodes",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NodesResponse" }
+              }
+            }
+          },
+          "401": { "description": "Missing or invalid token" }
+        }
+      }
+    },
+    "/api/alerts/webhooks": {
+      "get": {
+        "summary": "List webhooks for the current tenant",
+        "tags": ["Alerts"],
+        "security": [{ "AlertUser": [] }],
+        "responses": {
+          "200": {
+            "description": "Webhook collection",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AlertWebhookList" }
+              }
+            }
+          },
+          "401": { "description": "Missing tenant token" }
+        }
+      },
+      "post": {
+        "summary": "Create a webhook",
+        "tags": ["Alerts"],
+        "security": [{ "AlertUser": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AlertWebhook" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created webhook list",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AlertWebhookList" }
+              }
+            }
+          },
+          "401": { "description": "Missing tenant token" },
+          "409": { "description": "Webhook id already exists" },
+          "422": { "description": "Validation error" }
+        }
+      }
+    },
+    "/api/alerts/webhooks/{webhookId}": {
+      "put": {
+        "summary": "Update a webhook",
+        "tags": ["Alerts"],
+        "security": [{ "AlertUser": [] }],
+        "parameters": [
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AlertWebhook" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated webhook list",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AlertWebhookList" }
+              }
+            }
+          },
+          "401": { "description": "Missing tenant token" },
+          "404": { "description": "Webhook not found" },
+          "422": { "description": "Validation error" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a webhook",
+        "tags": ["Alerts"],
+        "security": [{ "AlertUser": [] }],
+        "parameters": [
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remaining webhooks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AlertWebhookList" }
+              }
+            }
+          },
+          "401": { "description": "Missing tenant token" },
+          "404": { "description": "Webhook not found" }
+        }
+      }
+    }
+  }
+}

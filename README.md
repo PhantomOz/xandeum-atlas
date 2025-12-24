@@ -2,6 +2,8 @@
 
 Live analytics for the Xandeum pNode network. The dashboard ingests gossip data directly from pNodes via pRPC (`get-pods-with-stats`) and visualises health, storage utilisation, release adoption, and node-level telemetry.
 
+Repository: https://github.com/PhantomOz/xandeum-atlas
+
 ### Features
 
 - Seed-aware pRPC client with automatic retry + caching
