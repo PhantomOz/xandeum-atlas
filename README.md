@@ -136,3 +136,8 @@ Each embed broadcasts `postMessage({ type: "xandeum-embed-resize", height })`; a
 ```
 
 Widgets live at `/embed/summary` and `/embed/history`; both accept the optional `token`, `interval`, and `points` parameters to mirror the Export API. Use them to syndicate Atlas metrics without giving users access to the full dashboard UI.
+
+
+### Developer Signature
+
+Built by [@SuperDevFavour](https://x.com/SuperDevFavour)

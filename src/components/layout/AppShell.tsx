@@ -60,6 +60,13 @@ export function AppShell({ children }: AppShellProps) {
               </div>
             </div>
             {children}
+            <p className="mt-8 text-[11px] uppercase tracking-[0.4em] text-white/25">
+              Crafted by
+              {" "}
+              <Link href="https://x.com/SuperDevFavour" className="text-white/40 underline-offset-2 hover:text-white/70">
+                @SuperDevFavour
+              </Link>
+            </p>
           </div>
         </div>
       </div>
