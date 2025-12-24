@@ -12,6 +12,7 @@ Live analytics for the Xandeum pNode network. The dashboard ingests gossip data 
 - In-app seed override panel to target any custom gossip scouts
 - Slide-over inspector per node with raw JSON export
 - Rolling history capture with trend chart (stored locally under `data/pnode-history.json`)
+- Multi-tenant alert webhooks with UI + API so hosted users can subscribe to their own triggers
 
 ### Getting Started
 
@@ -36,6 +37,54 @@ PNODE_HISTORY_LIMIT=288         # max snapshots to persist for trends
 ```
 
 You can point the app at custom seeds (IP or hostnames) either via the `.env` above or through the "Discovery list" control in the UI (comma-separated). The server-side fetcher will try `get-pods-with-stats`, fall back to `get-pods`, deduplicate nodes by pubkey, and cache the snapshot for `PNODE_CACHE_TTL` ms per discovery list.
+
+### Alert Webhooks
+
+Managed deployments expose `/alerts`, a self-serve console where downstream users paste their access token and curate their own webhooks + triggers. Each token maps to an isolated namespace that is persisted in `data/user-alert-webhooks.json`, while cooldowns live in `data/alert-log.json`. If you still maintain the legacy single-tenant file (`data/alert-webhooks.json`), those entries are read-only and show up under the special `__legacy__` tenant.
+
+#### Access model
+
+- Generate an access token (any string matching `[a-zA-Z0-9._:-]{3,64}`) and share it with the customer who should manage their alerts.
+- The `/alerts` UI stores that token locally and calls the API with an `x-alert-user` header so only that tenant’s configs are touched.
+- Webhook payloads include `tenantId` so your receivers can route downstream notifications.
+
+#### API surface
+
+All endpoints require `x-alert-user: <token>`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/alerts/webhooks` | List webhooks for the current tenant. |
+| `POST` | `/api/alerts/webhooks` | Create a webhook (body must match the schema below). |
+| `PUT` | `/api/alerts/webhooks/:id` | Replace the webhook with the given id. |
+| `DELETE` | `/api/alerts/webhooks/:id` | Remove that webhook. |
+
+Schema snippet:
+
+```json
+{
+	"id": "pagerduty",
+	"label": "PagerDuty",
+	"url": "https://hooks.example.com/xandeum",
+	"secret": "optional-shared-secret",
+	"isEnabled": true,
+	"triggers": [
+		{ "type": "healthyPercentBelow", "percent": 70, "cooldownMinutes": 15 },
+		{ "type": "totalNodesDrop", "percent": 10 }
+	]
+}
+```
+
+Supported trigger types:
+
+- `totalNodesDrop` – fires when total nodes decreased by at least `percent` versus the previous snapshot.
+- `healthyPercentBelow` – fires when the healthy node share falls below `percent`.
+- `criticalPercentAbove` – fires when the critical share exceeds `percent`.
+- `avgUsagePercentAbove` – fires when average storage usage rises above `percent`.
+
+Each trigger inherits the default 30-minute cooldown unless `cooldownMinutes` is set. Deliveries POST `{ webhookId, tenantId, triggerType, reason, generatedAt, current, previous }` with an `x-alert-secret` header when `secret` is supplied.
+
+> Tip: Persist `data/user-alert-webhooks.json` and `data/alert-log.json` on durable storage (volume, bucket, etc.) so tenants keep their settings and cooldowns across deployments.
 
 ### Scripts
 

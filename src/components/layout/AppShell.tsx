@@ -1,4 +1,6 @@
+import { BellRing } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 interface AppShellProps {
@@ -23,9 +25,18 @@ export function AppShell({ children }: AppShellProps) {
                   <p className="text-lg font-semibold text-white">pNode Atlas</p>
                 </div>
               </div>
-              <p className="text-sm text-slate-400 sm:max-w-md">
-                Operational telemetry for the distributed storage network — crafted for operators who need desktop-grade insight.
-              </p>
+              <div className="flex flex-col gap-3 text-sm text-slate-400 sm:max-w-md sm:text-right">
+                <p>Operational telemetry for the distributed storage network — crafted for operators who need desktop-grade insight.</p>
+                <div className="flex justify-start gap-3 sm:justify-end">
+                  <Link
+                    href="/alerts"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white transition hover:border-emerald-400"
+                  >
+                    <BellRing className="h-3.5 w-3.5 text-emerald-300" />
+                    Alerts
+                  </Link>
+                </div>
+              </div>
             </div>
             {children}
           </div>

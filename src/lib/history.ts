@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { PNodeSnapshot, SnapshotHistoryEntry } from "@/types/pnode";
+import { processAlertWebhooks } from "@/lib/alerts";
 
 const HISTORY_FILE = path.join(process.cwd(), "data", "pnode-history.json");
 const MAX_ENTRIES = Number(process.env.PNODE_HISTORY_LIMIT ?? 288);
@@ -40,9 +41,11 @@ export async function recordSnapshotMetrics(snapshot: PNodeSnapshot): Promise<vo
       warning: snapshot.metrics.warning,
       critical: snapshot.metrics.critical,
     };
+    const previous = history.length ? history[history.length - 1] : null;
     history.push(entry);
     const trimmed = history.slice(-MAX_ENTRIES);
     await fs.writeFile(HISTORY_FILE, JSON.stringify(trimmed, null, 2), "utf8");
+    await processAlertWebhooks(previous, entry);
   } catch (error) {
     console.error("Failed to persist pNode snapshot history", error);
   }
