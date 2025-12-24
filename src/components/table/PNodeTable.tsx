@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, MouseEvent } from "react";
+import type { ChangeEvent, FormEvent, KeyboardEvent, MouseEvent } from "react";
 import { ArrowUpDown, Check, Copy, Download, Filter, Info, Link2, PenSquare, Plus, X } from "lucide-react";
 import type { PNode } from "@/types/pnode";
 import { abbreviateKey, formatDuration, formatPercent, formatRelativeTimeFromSeconds } from "@/lib/format";
@@ -77,6 +77,8 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
   const [shareCopied, setShareCopied] = useState(false);
   const [saveViewName, setSaveViewName] = useState("");
   const [savedViews, setSavedViews] = useState<SavedExplorerView[]>([]);
+  const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hydratedRef = useRef(false);
@@ -251,6 +253,7 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
       console.warn("Unable to persist saved explorer views", error);
     }
   }, [savedViews]);
+
 
   const handleClearSearch = () => {
     setSearch("");
@@ -480,23 +483,58 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
     setPage(next.page);
   };
 
-  const removeSavedView = (viewId: string) => {
-    setSavedViews((prev) => prev.filter((view) => view.id !== viewId));
-  };
-
-  const renameSavedView = (viewId: string) => {
-    if (typeof window === "undefined") return;
+  const beginRenameSavedView = (viewId: string) => {
     const target = savedViews.find((view) => view.id === viewId);
     if (!target) return;
-    const nextName = window.prompt("Rename saved view", target.name);
-    if (nextName === null) return;
-    const trimmed = nextName.trim();
-    if (!trimmed || trimmed === target.name) return;
+    setRenamingViewId(viewId);
+    setRenameValue(target.name);
+  };
+
+  const confirmRenameSavedView = () => {
+    if (!renamingViewId) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    const target = savedViews.find((view) => view.id === renamingViewId);
+    if (!target) {
+      setRenamingViewId(null);
+      setRenameValue("");
+      return;
+    }
+    if (trimmed === target.name) {
+      cancelRenameSavedView();
+      return;
+    }
     setSavedViews((prev) => {
       const lower = trimmed.toLowerCase();
-      const deduped = prev.filter((view) => view.id === viewId || view.name.toLowerCase() !== lower);
-      return deduped.map((view) => (view.id === viewId ? { ...view, name: trimmed } : view));
+      const deduped = prev.filter((view) => view.id === renamingViewId || view.name.toLowerCase() !== lower);
+      return deduped.map((view) => (view.id === renamingViewId ? { ...view, name: trimmed } : view));
     });
+    setRenamingViewId(null);
+    setRenameValue("");
+  };
+
+  const cancelRenameSavedView = () => {
+    setRenamingViewId(null);
+    setRenameValue("");
+  };
+
+  const handleRenameInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelRenameSavedView();
+    }
+  };
+
+  const handleRenameSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    confirmRenameSavedView();
+  };
+
+  const removeSavedView = (viewId: string) => {
+    setSavedViews((prev) => prev.filter((view) => view.id !== viewId));
+    if (renamingViewId === viewId) {
+      cancelRenameSavedView();
+    }
   };
 
   const handleSortChange = (key: SortKey) => {
@@ -763,34 +801,19 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
           {savedViews.length ? (
             <div className="flex flex-wrap gap-2">
               {savedViews.map((view) => (
-                <div
+                <SavedViewChip
                   key={view.id}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs"
-                >
-                  <button
-                    type="button"
-                    onClick={() => applySavedView(view.id)}
-                    className="text-slate-100 hover:text-white"
-                  >
-                    {view.name}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => renameSavedView(view.id)}
-                    aria-label={`Rename ${view.name}`}
-                    className="text-slate-500 transition hover:text-slate-200"
-                  >
-                    <PenSquare className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeSavedView(view.id)}
-                    aria-label={`Delete ${view.name}`}
-                    className="text-slate-500 transition hover:text-rose-300"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                  view={view}
+                  isRenaming={renamingViewId === view.id}
+                  renameValue={renameValue}
+                  onApply={() => applySavedView(view.id)}
+                  onBeginRename={() => beginRenameSavedView(view.id)}
+                  onRenameChange={setRenameValue}
+                  onRenameSubmit={handleRenameSubmit}
+                  onRenameKeyDown={handleRenameInputKeyDown}
+                  onCancelRename={cancelRenameSavedView}
+                  onRemove={() => removeSavedView(view.id)}
+                />
               ))}
             </div>
           ) : (
@@ -950,6 +973,75 @@ function InlineInfoTooltip({ text }: { text: string }) {
         {text}
       </span>
     </span>
+  );
+}
+
+function SavedViewChip({
+  view,
+  isRenaming,
+  renameValue,
+  onApply,
+  onBeginRename,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameKeyDown,
+  onCancelRename,
+  onRemove,
+}: {
+  view: SavedExplorerView;
+  isRenaming: boolean;
+  renameValue: string;
+  onApply: () => void;
+  onBeginRename: () => void;
+  onRenameChange: (value: string) => void;
+  onRenameSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onRenameKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onCancelRename: () => void;
+  onRemove: () => void;
+}) {
+  if (isRenaming) {
+    return (
+      <form
+        onSubmit={onRenameSubmit}
+        className="inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/10 px-3 py-1.5 text-xs"
+      >
+        <input
+          autoFocus
+          value={renameValue}
+          onChange={(event) => onRenameChange(event.target.value)}
+          onKeyDown={onRenameKeyDown}
+          className="w-32 bg-transparent text-sm text-white focus:outline-none"
+          placeholder="Rename view"
+        />
+        <button
+          type="submit"
+          className="rounded-full border border-emerald-400/60 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-emerald-200"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onCancelRename}
+          className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-slate-300"
+        >
+          Cancel
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs">
+      <button type="button" onClick={onApply} className="text-slate-100 hover:text-white">
+        {view.name}
+      </button>
+      <button type="button" onClick={onBeginRename} aria-label={`Rename ${view.name}`} className="text-slate-500 transition hover:text-slate-200">
+        <PenSquare className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" onClick={onRemove} aria-label={`Delete ${view.name}`} className="text-slate-500 transition hover:text-rose-300">
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
 
