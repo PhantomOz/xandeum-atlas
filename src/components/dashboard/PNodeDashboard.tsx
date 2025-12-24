@@ -64,7 +64,7 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
           <h1 className="mt-3 text-3xl font-semibold text-white">Discovering Xandeum pNodes…</h1>
           <p className="mt-2 text-slate-400">Waiting for the first gossip snapshot. Ensure at least one seed is reachable.</p>
           <button
-            onClick={refresh}
+            onClick={() => refresh()}
             className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 px-5 py-2 text-sm text-slate-200 hover:border-white/40"
           >
             <RefreshCcw className="h-4 w-4" />

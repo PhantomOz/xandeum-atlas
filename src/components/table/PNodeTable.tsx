@@ -112,7 +112,7 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
     const queryOverrides: Partial<ExplorerPersistedState> = {};
     const queryStatuses = params.get("status");
     if (queryStatuses) {
-      queryOverrides.statuses = queryStatuses.split(",");
+      queryOverrides.statuses = parseStatusList(queryStatuses.split(","));
     }
     const querySearch = params.get("q");
     if (querySearch) {
@@ -244,6 +244,36 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
 
   const versions = useMemo(() => Array.from(new Set(nodes.map((node) => node.version))).sort(), [nodes]);
 
+  const handleClearSearch = () => {
+    setSearch("");
+    setPage(1);
+  };
+
+  const resetStatuses = () => {
+    setStatusFilters([...STATUS_OPTIONS]);
+    setPage(1);
+  };
+
+  const clearExposureFilter = () => {
+    setExposureFilter("all");
+    setPage(1);
+  };
+
+  const clearVersions = () => {
+    setSelectedVersions([]);
+    setPage(1);
+  };
+
+  const clearMinUsage = () => {
+    setMinUsage("");
+    setPage(1);
+  };
+
+  const clearMaxUsage = () => {
+    setMaxUsage("");
+    setPage(1);
+  };
+
   const activeFilterChips: ActiveFilterChip[] = [];
   const trimmedSearch = search.trim();
   if (trimmedSearch) {
@@ -366,11 +396,6 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
     setPage(1);
   };
 
-  const resetStatuses = () => {
-    setStatusFilters([...STATUS_OPTIONS]);
-    setPage(1);
-  };
-
   const toggleVersion = (version: string) => {
     setSelectedVersions((prev) => {
       if (prev.includes(version)) {
@@ -378,11 +403,6 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
       }
       return [...prev, version];
     });
-    setPage(1);
-  };
-
-  const clearVersions = () => {
-    setSelectedVersions([]);
     setPage(1);
   };
 
@@ -409,25 +429,6 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
     }
   };
 
-  const handleClearSearch = () => {
-    setSearch("");
-    setPage(1);
-  };
-
-  const clearExposureFilter = () => {
-    setExposureFilter("all");
-    setPage(1);
-  };
-
-  const clearMinUsage = () => {
-    setMinUsage("");
-    setPage(1);
-  };
-
-  const clearMaxUsage = () => {
-    setMaxUsage("");
-    setPage(1);
-  };
 
   const resetAllFilters = () => {
     setSearch("");
