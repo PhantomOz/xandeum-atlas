@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AlertCircle, RefreshCcw, Satellite } from "lucide-react";
 import { usePnodeData } from "@/hooks/usePnodeData";
 import { useHistoryData } from "@/hooks/useHistoryData";
@@ -13,13 +14,47 @@ import { HistoricalTrends } from "./HistoricalTrends";
 import { PNodeTable } from "../table/PNodeTable";
 import { SeedControls } from "./SeedControls";
 
+const HISTORY_LIMIT_OPTIONS = [24, 48, 72, 144];
+const DEFAULT_HISTORY_LIMIT = HISTORY_LIMIT_OPTIONS[2];
+const HISTORY_LIMIT_STORAGE_KEY = "pnodes:historyLimit";
+
 interface DashboardProps {
   initialSnapshot: PNodeSnapshot | null;
 }
 
 export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
   const { snapshot, refresh, isRefreshing, error, seedPreference } = usePnodeData(initialSnapshot);
-  const { history, isLoading: historyLoading, error: historyError, refresh: refreshHistory } = useHistoryData({ limit: 72, refreshInterval: 120000 });
+  const [historyLimit, setHistoryLimit] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_HISTORY_LIMIT;
+    }
+    try {
+      const raw = window.localStorage.getItem(HISTORY_LIMIT_STORAGE_KEY);
+      if (!raw) return DEFAULT_HISTORY_LIMIT;
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed) && HISTORY_LIMIT_OPTIONS.includes(parsed)) {
+        return parsed;
+      }
+    } catch (storageError) {
+      console.warn("Unable to load history limit preference", storageError);
+    }
+    return DEFAULT_HISTORY_LIMIT;
+  });
+  const { history, isLoading: historyLoading, error: historyError, refresh: refreshHistory } = useHistoryData({ limit: historyLimit, refreshInterval: 120000 });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(HISTORY_LIMIT_STORAGE_KEY, String(historyLimit));
+    } catch (storageError) {
+      console.warn("Unable to persist history limit preference", storageError);
+    }
+  }, [historyLimit]);
+
+  const handleHistoryLimitChange = (next: number) => {
+    if (!HISTORY_LIMIT_OPTIONS.includes(next)) return;
+    setHistoryLimit((current) => (current === next ? current : next));
+  };
 
   if (!snapshot) {
     return (
@@ -104,7 +139,15 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
         <StatusPanel metrics={snapshot.metrics} />
       </div>
 
-      <HistoricalTrends data={history} isLoading={historyLoading} error={historyError} onRefresh={refreshHistory} />
+      <HistoricalTrends
+        data={history}
+        isLoading={historyLoading}
+        error={historyError}
+        onRefresh={refreshHistory}
+        limitOptions={HISTORY_LIMIT_OPTIONS}
+        activeLimit={historyLimit}
+        onLimitChange={handleHistoryLimitChange}
+      />
 
       <StorageLeaders leaders={snapshot.metrics.storageLeaders} />
 
