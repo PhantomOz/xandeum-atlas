@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, RefreshCcw, Satellite } from "lucide-react";
 import { usePnodeData } from "@/hooks/usePnodeData";
 import { useHistoryData } from "@/hooks/useHistoryData";
@@ -10,13 +10,17 @@ import { VersionDistribution } from "./VersionDistribution";
 import { UsageBands } from "./UsageBands";
 import { StatusPanel } from "./StatusPanel";
 import { StorageLeaders } from "./StorageLeaders";
-import { HistoricalTrends } from "./HistoricalTrends";
+import { HistoricalTrends, type HistoryView } from "./HistoricalTrends";
 import { PNodeTable } from "../table/PNodeTable";
 import { SeedControls } from "./SeedControls";
 
 const HISTORY_LIMIT_OPTIONS = [24, 48, 72, 144];
 const DEFAULT_HISTORY_LIMIT = HISTORY_LIMIT_OPTIONS[2];
+const DEFAULT_HISTORY_VIEW: HistoryView = "capacity";
 const HISTORY_LIMIT_STORAGE_KEY = "pnodes:historyLimit";
+const HISTORY_VIEW_STORAGE_KEY = "pnodes:trendView";
+const TREND_LIMIT_QUERY_KEY = "trendLimit";
+const TREND_VIEW_QUERY_KEY = "trendView";
 
 interface DashboardProps {
   initialSnapshot: PNodeSnapshot | null;
@@ -28,17 +32,45 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
     if (typeof window === "undefined") {
       return DEFAULT_HISTORY_LIMIT;
     }
-    try {
-      const raw = window.localStorage.getItem(HISTORY_LIMIT_STORAGE_KEY);
-      if (!raw) return DEFAULT_HISTORY_LIMIT;
-      const parsed = Number(raw);
+    const params = new URLSearchParams(window.location.search);
+    const queryLimit = params.get(TREND_LIMIT_QUERY_KEY);
+    if (queryLimit) {
+      const parsed = Number(queryLimit);
       if (Number.isFinite(parsed) && HISTORY_LIMIT_OPTIONS.includes(parsed)) {
         return parsed;
+      }
+    }
+    try {
+      const raw = window.localStorage.getItem(HISTORY_LIMIT_STORAGE_KEY);
+      if (raw) {
+        const parsed = Number(raw);
+        if (Number.isFinite(parsed) && HISTORY_LIMIT_OPTIONS.includes(parsed)) {
+          return parsed;
+        }
       }
     } catch (storageError) {
       console.warn("Unable to load history limit preference", storageError);
     }
     return DEFAULT_HISTORY_LIMIT;
+  });
+  const [historyView, setHistoryView] = useState<HistoryView>(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_HISTORY_VIEW;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const queryView = params.get(TREND_VIEW_QUERY_KEY);
+    if (isHistoryView(queryView)) {
+      return queryView;
+    }
+    try {
+      const stored = window.localStorage.getItem(HISTORY_VIEW_STORAGE_KEY);
+      if (isHistoryView(stored)) {
+        return stored;
+      }
+    } catch (storageError) {
+      console.warn("Unable to load history view preference", storageError);
+    }
+    return DEFAULT_HISTORY_VIEW;
   });
   const { history, isLoading: historyLoading, error: historyError, refresh: refreshHistory } = useHistoryData({ limit: historyLimit, refreshInterval: 120000 });
 
@@ -51,10 +83,28 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
     }
   }, [historyLimit]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(HISTORY_VIEW_STORAGE_KEY, historyView);
+    } catch (storageError) {
+      console.warn("Unable to persist history view preference", storageError);
+    }
+  }, [historyView]);
+
   const handleHistoryLimitChange = (next: number) => {
     if (!HISTORY_LIMIT_OPTIONS.includes(next)) return;
     setHistoryLimit((current) => (current === next ? current : next));
   };
+
+  const handleHistoryViewChange = (next: HistoryView) => {
+    setHistoryView((current) => (current === next ? current : next));
+  };
+
+  const explorerShareQuery = useMemo(() => ({
+    [TREND_LIMIT_QUERY_KEY]: String(historyLimit),
+    [TREND_VIEW_QUERY_KEY]: historyView,
+  }), [historyLimit, historyView]);
 
   if (!snapshot) {
     return (
@@ -147,11 +197,17 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
         limitOptions={HISTORY_LIMIT_OPTIONS}
         activeLimit={historyLimit}
         onLimitChange={handleHistoryLimitChange}
+        view={historyView}
+        onViewChange={handleHistoryViewChange}
       />
 
       <StorageLeaders leaders={snapshot.metrics.storageLeaders} />
 
-      <PNodeTable nodes={snapshot.nodes} lastUpdated={snapshot.fetchedAt} />
+      <PNodeTable nodes={snapshot.nodes} lastUpdated={snapshot.fetchedAt} shareQuery={explorerShareQuery} />
     </div>
   );
+}
+
+function isHistoryView(value: string | null): value is HistoryView {
+  return value === "capacity" || value === "utilization" || value === "health";
 }

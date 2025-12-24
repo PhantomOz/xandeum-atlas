@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SnapshotHistoryEntry } from "@/types/pnode";
 import { formatNumber, formatPercent } from "@/lib/format";
 import { AlertTriangle, Info, RefreshCcw } from "lucide-react";
 
-type HistoryView = "capacity" | "utilization" | "health";
-const HISTORY_VIEW_STORAGE_KEY = "pnodes:trendView";
+export type HistoryView = "capacity" | "utilization" | "health";
 
 const VIEW_OPTIONS: { value: HistoryView; label: string }[] = [
   { value: "capacity", label: "Capacity" },
@@ -23,25 +22,11 @@ interface HistoricalTrendsProps {
   limitOptions?: number[];
   activeLimit?: number;
   onLimitChange?: (next: number) => void;
+  view: HistoryView;
+  onViewChange: (next: HistoryView) => void;
 }
 
-export function HistoricalTrends({ data, isLoading, error, onRefresh, limitOptions = [24, 48, 72], activeLimit, onLimitChange }: HistoricalTrendsProps) {
-  const [view, setView] = useState<HistoryView>(() => {
-    if (typeof window === "undefined") return "capacity";
-    const stored = window.localStorage.getItem(HISTORY_VIEW_STORAGE_KEY);
-    if (stored === "capacity" || stored === "utilization" || stored === "health") {
-      return stored;
-    }
-    return "capacity";
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(HISTORY_VIEW_STORAGE_KEY, view);
-    } catch (error) {
-      console.warn("Unable to persist history view preference", error);
-    }
-  }, [view]);
+export function HistoricalTrends({ data, isLoading, error, onRefresh, limitOptions = [24, 48, 72], activeLimit, onLimitChange, view, onViewChange }: HistoricalTrendsProps) {
   const latestEntry = data.length ? data[data.length - 1] : null;
   const summaryMetrics = useMemo(() => {
     if (!latestEntry) return [];
@@ -73,7 +58,7 @@ export function HistoricalTrends({ data, isLoading, error, onRefresh, limitOptio
                   key={option.value}
                   type="button"
                   aria-pressed={isActive}
-                  onClick={() => setView(option.value)}
+                  onClick={() => onViewChange(option.value)}
                   className={`rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition ${isActive ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-200" : "border-white/10 text-slate-300 hover:border-white/30"}`}
                 >
                   {option.label}

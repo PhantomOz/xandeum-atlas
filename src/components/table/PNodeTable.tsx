@@ -10,6 +10,7 @@ import { PNodeDrawer } from "./PNodeDrawer";
 interface PNodeTableProps {
   nodes: PNode[];
   lastUpdated: string;
+  shareQuery?: Record<string, string | undefined>;
 }
 
 type SortKey = "health" | "uptime" | "usage" | "lastSeen";
@@ -60,7 +61,7 @@ interface ActiveFilterChip {
   onClear: () => void;
 }
 
-export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
+export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) {
   const [search, setSearch] = useState(DEFAULT_PERSISTED_STATE.search);
   const [statusFilters, setStatusFilters] = useState<StatusFilterOption[]>(DEFAULT_PERSISTED_STATE.statuses);
   const [exposureFilter, setExposureFilter] = useState<ExposureFilter>(DEFAULT_PERSISTED_STATE.exposure);
@@ -201,6 +202,13 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
     };
   }, []);
 
+  const versions = useMemo(() => Array.from(new Set(nodes.map((node) => node.version))).sort(), [nodes]);
+
+  const shareQueryEntries = useMemo(() => {
+    if (!shareQuery) return [] as Array<[string, string]>;
+    return Object.entries(shareQuery).filter(([, value]) => typeof value === "string" && value.length) as Array<[string, string]>;
+  }, [shareQuery]);
+
   useEffect(() => {
     if (typeof window === "undefined" || !hydratedRef.current) {
       return;
@@ -226,10 +234,12 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
     if (state.pageSize !== DEFAULT_PERSISTED_STATE.pageSize) params.set("pageSize", String(state.pageSize));
     if (state.page > 1) params.set("page", String(state.page));
 
+    shareQueryEntries.forEach(([key, value]) => params.set(key, value));
+
     const query = params.toString();
     const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     window.history.replaceState(null, "", newUrl);
-  }, [snapshotExplorerState]);
+  }, [snapshotExplorerState, shareQueryEntries]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !hydratedRef.current) {
@@ -241,8 +251,6 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
       console.warn("Unable to persist saved explorer views", error);
     }
   }, [savedViews]);
-
-  const versions = useMemo(() => Array.from(new Set(nodes.map((node) => node.version))).sort(), [nodes]);
 
   const handleClearSearch = () => {
     setSearch("");
