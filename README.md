@@ -36,13 +36,19 @@ PNODE_CACHE_TTL=25000           # ms
 PNODE_REQUEST_TIMEOUT=7000      # ms
 PNODE_STALE_SECONDS=1800        # mark nodes stale after 30 min
 PNODE_HISTORY_LIMIT=288         # max snapshots to persist for trends
+DATA_ROOT=./data                # override when persisting to a local volume
+KV_REST_API_URL=                # set with KV token to persist trends/alerts off-disk
+KV_REST_API_TOKEN=
+KV_NAMESPACE=atlas
 ```
 
 You can point the app at custom seeds (IP or hostnames) either via the `.env` above or through the "Discovery list" control in the UI (comma-separated). The server-side fetcher will try `get-pods-with-stats`, fall back to `get-pods`, deduplicate nodes by pubkey, and cache the snapshot for `PNODE_CACHE_TTL` ms per discovery list.
 
+Set both `KV_REST_API_URL` and `KV_REST_API_TOKEN` (Upstash / Vercel KV credentials) on serverless hosts so history + alert configs persist between deployments. When those variables are absent, Atlas writes the JSON stores to `DATA_ROOT`, which should live on a durable volume (Docker bind mount, persistent disk, etc.).
+
 ### Alert Webhooks
 
-Managed deployments expose `/alerts`, a self-serve console where downstream users paste their access token and curate their own webhooks + triggers. Each token maps to an isolated namespace that is persisted in `data/user-alert-webhooks.json`, while cooldowns live in `data/alert-log.json`. If you still maintain the legacy single-tenant file (`data/alert-webhooks.json`), those entries are read-only and show up under the special `__legacy__` tenant.
+Managed deployments expose `/alerts`, a self-serve console where downstream users paste their access token and curate their own webhooks + triggers. Each token maps to an isolated namespace persisted in Vercel KV when `KV_REST_API_URL`/`KV_REST_API_TOKEN` are set (or to `DATA_ROOT/user-alert-webhooks.json` when you run on your own volume). If you still maintain the legacy single-tenant file (`data/alert-webhooks.json`), those entries are read-only and show up under the special `__legacy__` tenant.
 
 #### Access model
 
@@ -86,7 +92,7 @@ Supported trigger types:
 
 Each trigger inherits the default 30-minute cooldown unless `cooldownMinutes` is set. Deliveries POST `{ webhookId, tenantId, triggerType, reason, generatedAt, current, previous }` with an `x-alert-secret` header when `secret` is supplied.
 
-> Tip: Persist `data/user-alert-webhooks.json` and `data/alert-log.json` on durable storage (volume, bucket, etc.) so tenants keep their settings and cooldowns across deployments.
+> Tip: On Vercel, wire Atlas to Upstash/Vercel KV via `KV_REST_API_URL` + `KV_REST_API_TOKEN`; on self-hosted targets, point `DATA_ROOT` at a persistent path so `user-alert-webhooks.json`, `alert-log.json`, and `pnode-history.json` survive restarts.
 
 ### Scripts
 
@@ -96,7 +102,7 @@ Each trigger inherits the default 30-minute cooldown unless `cooldownMinutes` is
 
 ### Deployment
 
-Any Node 18+ target works (Vercel, Netlify, self-hosted). Ensure outbound access to your chosen pNode seeds over HTTP/6000 and configure the environment variables above. Historical data is persisted to `data/pnode-history.json`; if you deploy to a stateless host, point that path to a writable volume or replace it with an external store.
+Any Node 18+ target works (Vercel, Netlify, self-hosted). Ensure outbound access to your chosen pNode seeds over HTTP/6000 and configure the environment variables above. For serverless targets, provide `KV_REST_API_URL`/`KV_REST_API_TOKEN` so history and alert data live in KV. For self-hosted targets, set `DATA_ROOT` to a mounted volume if you prefer the JSON-file persistence.
 
 ### Export API
 

@@ -12,7 +12,7 @@ const deploymentSteps: DeploymentStep[] = [
     title: "Prepare environment",
     details: [
       (
-        <span>
+        <span key="clone-repo">
           Clone
           {" "}
           <Link href="https://github.com/PhantomOz/xandeum-atlas" className="text-emerald-300 underline" target="_blank" rel="noreferrer">
@@ -23,7 +23,7 @@ const deploymentSteps: DeploymentStep[] = [
         </span>
       ),
       "Ensure Node 18+, pnpm, and access to your pNode seeds over HTTP/6000.",
-      "Provision persistent storage for `data/pnode-history.json`, `data/user-alert-webhooks.json`, and `data/alert-log.json`.",
+      "Decide on persistence: configure `KV_REST_API_URL`/`KV_REST_API_TOKEN` (Upstash/Vercel KV) or ensure `DATA_ROOT` points at a writable volume.",
     ],
   },
   {
@@ -32,6 +32,7 @@ const deploymentSteps: DeploymentStep[] = [
       "Populate `PNODE_SEEDS`, `PNODE_CACHE_TTL`, and optional `PNODE_HISTORY_LIMIT`.",
       "Set `EXPORT_API_TOKEN` if you want to gate the public analytics API.",
       "Provide `EXPORT_API_BASE_URL` when fronting the app behind a proxy or custom domain.",
+      "Optional: tweak `KV_NAMESPACE` or `DATA_ROOT` if you manage multiple Atlas deployments.",
     ],
   },
   {
@@ -39,7 +40,7 @@ const deploymentSteps: DeploymentStep[] = [
     details: [
       "Run `pnpm install`, `pnpm lint`, and `pnpm build`.",
       "Deploy the `.next` output or let your hosting provider run `pnpm build && pnpm start`.",
-      "Mount `/data` (or equivalent) to durable storage so history + alert configs persist.",
+      "Confirm KV credentials or mounted `DATA_ROOT` so history + alert configs persist across deploys.",
     ],
   },
   {
@@ -102,7 +103,7 @@ const personaFlows = [
     title: "Operator deploy flow",
     persona: "Platform engineer",
     steps: [
-      { label: "Plan", description: "Identify writable volume for /data and confirm pRPC seed reachability." },
+      { label: "Plan", description: "Pick persistence (KV creds or /data volume) and confirm pRPC seed reachability." },
       { label: "Configure", description: "Set env vars (`PNODE_SEEDS`, `EXPORT_API_TOKEN`, alert storage paths)." },
       { label: "Ship", description: "`pnpm build && pnpm start` on your host, fronted by CDN/Load Balancer." },
       { label: "Observe", description: "Watch `/api/export/*` metrics, rotate alert secrets, schedule backups." },
@@ -235,7 +236,7 @@ export default function GuidePage() {
             <ChecklistCard
               title="Operational hygiene"
               items={[
-                "Mount /data to durable storage",
+                "Back storage with KV or a mounted /data volume",
                 "Schedule backups or externalize history store",
                 "Monitor `/api/export/*` and `/alerts` logs",
               ]}

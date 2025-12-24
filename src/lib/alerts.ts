@@ -3,9 +3,10 @@ import path from "node:path";
 import { getAllUserAlertConfigTuples } from "@/lib/alert-config-store";
 import { alertWebhookSchema, type AlertTrigger, type AlertWebhookConfig } from "@/lib/alert-schema";
 import type { SnapshotHistoryEntry } from "@/types/pnode";
+import { readJsonStore, writeJsonStore } from "@/lib/persistent-store";
 
 const LEGACY_ALERT_CONFIG_PATH = path.join(process.cwd(), "data", "alert-webhooks.json");
-const ALERT_LOG_PATH = path.join(process.cwd(), "data", "alert-log.json");
+const ALERT_LOG_STORE_KEY = "alert-log";
 const DEFAULT_COOLDOWN_MINUTES = 30;
 
 interface AlertLogRecord {
@@ -52,7 +53,7 @@ export async function processAlertWebhooks(previous: SnapshotHistoryEntry | null
       for (const key of deliveredKeys) {
         nextLog[key] = now;
       }
-      await fs.writeFile(ALERT_LOG_PATH, JSON.stringify(nextLog, null, 2), "utf8");
+      await writeJsonStore(ALERT_LOG_STORE_KEY, nextLog);
     }
   } catch (error) {
     console.error("Alert webhook processing failed", error);
@@ -78,8 +79,6 @@ async function loadLegacyAlertConfigs(): Promise<Array<{ userId: string; config:
       .map((config) => ({ userId: "__legacy__", config }));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      await fs.mkdir(path.dirname(LEGACY_ALERT_CONFIG_PATH), { recursive: true });
-      await fs.writeFile(LEGACY_ALERT_CONFIG_PATH, "[]", "utf8");
       return [];
     }
     console.error("Unable to read legacy alert config", error);
@@ -88,21 +87,7 @@ async function loadLegacyAlertConfigs(): Promise<Array<{ userId: string; config:
 }
 
 async function loadAlertLog(): Promise<AlertLogRecord> {
-  try {
-    const raw = await fs.readFile(ALERT_LOG_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") {
-      return {};
-    }
-    return parsed as AlertLogRecord;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      await fs.mkdir(path.dirname(ALERT_LOG_PATH), { recursive: true });
-      await fs.writeFile(ALERT_LOG_PATH, "{}", "utf8");
-      return {};
-    }
-    throw error;
-  }
+  return readJsonStore<AlertLogRecord>(ALERT_LOG_STORE_KEY, {});
 }
 
 function collectTriggeredEvents(

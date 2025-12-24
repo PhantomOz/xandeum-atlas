@@ -1,8 +1,7 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { alertWebhookSchema, type AlertWebhookConfig } from "@/lib/alert-schema";
+import { readJsonStore, writeJsonStore } from "@/lib/persistent-store";
 
-const USER_ALERT_CONFIG_PATH = path.join(process.cwd(), "data", "user-alert-webhooks.json");
+const ALERT_CONFIG_STORE_KEY = "user-alert-webhooks";
 
 type AlertStoreShape = Record<string, AlertWebhookConfig[]>;
 
@@ -34,41 +33,22 @@ export async function saveUserAlertConfigs(userId: string, configs: AlertWebhook
   return sanitized;
 }
 
-async function ensureStoreFile(): Promise<void> {
-  await fs.mkdir(path.dirname(USER_ALERT_CONFIG_PATH), { recursive: true });
-  try {
-    await fs.access(USER_ALERT_CONFIG_PATH);
-  } catch {
-    await fs.writeFile(USER_ALERT_CONFIG_PATH, "{}", "utf8");
-  }
-}
-
 async function readStore(): Promise<AlertStoreShape> {
-  await ensureStoreFile();
-  try {
-    const raw = await fs.readFile(USER_ALERT_CONFIG_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") {
-      return {};
-    }
-    return Object.entries(parsed as Record<string, unknown>).reduce<AlertStoreShape>((acc, [userId, configs]) => {
-      if (typeof userId !== "string" || !userId.trim()) {
-        return acc;
-      }
-      const normalized = sanitizeConfigList(configs);
-      if (normalized.length) {
-        acc[userId] = normalized;
-      }
+  const parsed = await readJsonStore<Record<string, unknown>>(ALERT_CONFIG_STORE_KEY, {});
+  return Object.entries(parsed).reduce<AlertStoreShape>((acc, [userId, configs]) => {
+    if (typeof userId !== "string" || !userId.trim()) {
       return acc;
-    }, {});
-  } catch (error) {
-    console.error("Unable to read user alert config store", error);
-    return {};
-  }
+    }
+    const normalized = sanitizeConfigList(configs);
+    if (normalized.length) {
+      acc[userId] = normalized;
+    }
+    return acc;
+  }, {});
 }
 
 async function writeStore(store: AlertStoreShape): Promise<void> {
-  await fs.writeFile(USER_ALERT_CONFIG_PATH, JSON.stringify(store, null, 2), "utf8");
+  await writeJsonStore(ALERT_CONFIG_STORE_KEY, store);
 }
 
 function sanitizeConfigList(value: unknown): AlertWebhookConfig[] {
