@@ -20,6 +20,7 @@ type ExposureFilter = "all" | "public" | "private";
 const STATUS_OPTIONS: StatusFilterOption[] = ["healthy", "warning", "critical"];
 const STORAGE_KEY = "pnodes:directoryState";
 const SAVED_VIEWS_KEY = "pnodes:directorySavedViews";
+const VIEW_STATE_QUERY_KEY = "viewState";
 const MAX_SAVED_VIEWS = 8;
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PERSISTED_STATE: ExplorerPersistedState = {
@@ -112,6 +113,12 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
       console.warn("Unable to load persisted explorer state", error);
     }
 
+    let sharedViewState: ExplorerPersistedState | null = null;
+    const encodedViewState = params.get(VIEW_STATE_QUERY_KEY);
+    if (encodedViewState) {
+      sharedViewState = decodeExplorerState(encodedViewState);
+    }
+
     const queryOverrides: Partial<ExplorerPersistedState> = {};
     const queryStatuses = params.get("status");
     if (queryStatuses) {
@@ -155,6 +162,10 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
       if (Number.isFinite(parsedPage) && parsedPage > 0) {
         queryOverrides.page = parsedPage;
       }
+    }
+
+    if (sharedViewState) {
+      persisted = sharedViewState;
     }
 
     persisted = normalizeExplorerState({ ...persisted, ...queryOverrides });
@@ -237,6 +248,8 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
     if (state.page > 1) params.set("page", String(state.page));
 
     shareQueryEntries.forEach(([key, value]) => params.set(key, value));
+
+    params.set(VIEW_STATE_QUERY_KEY, serializeExplorerState(state));
 
     const query = params.toString();
     const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
@@ -429,7 +442,10 @@ export function PNodeTable({ nodes, lastUpdated, shareQuery }: PNodeTableProps) 
   const handleShareLink = async () => {
     if (typeof window === "undefined") return;
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const url = new URL(window.location.href);
+      const state = snapshotExplorerState();
+      url.searchParams.set(VIEW_STATE_QUERY_KEY, serializeExplorerState(state));
+      await navigator.clipboard.writeText(url.toString());
       setShareCopied(true);
       if (shareTimeoutRef.current) {
         clearTimeout(shareTimeoutRef.current);
@@ -1050,6 +1066,20 @@ function parseStatusList(values: string[]): StatusFilterOption[] {
     .map((value) => value.trim().toLowerCase())
     .filter((value): value is StatusFilterOption => STATUS_OPTIONS.includes(value as StatusFilterOption));
   return sanitized.length ? Array.from(new Set(sanitized)) : [...STATUS_OPTIONS];
+}
+
+function serializeExplorerState(state: ExplorerPersistedState): string {
+  return JSON.stringify(state);
+}
+
+function decodeExplorerState(value: string): ExplorerPersistedState | null {
+  try {
+    const parsed = JSON.parse(value);
+    return normalizeExplorerState(parsed as Partial<ExplorerPersistedState>);
+  } catch (error) {
+    console.warn("Unable to decode shared explorer state", error);
+    return null;
+  }
 }
 
 function parsePercentInput(value: string): number | null {
