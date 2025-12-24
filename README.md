@@ -95,3 +95,42 @@ Each trigger inherits the default 30-minute cooldown unless `cooldownMinutes` is
 ### Deployment
 
 Any Node 18+ target works (Vercel, Netlify, self-hosted). Ensure outbound access to your chosen pNode seeds over HTTP/6000 and configure the environment variables above. Historical data is persisted to `data/pnode-history.json`; if you deploy to a stateless host, point that path to a writable volume or replace it with an external store.
+
+### Export API
+
+The dashboard now exposes curated analytics under `/api/export/*` for downstream dashboards and partner apps:
+
+- `GET /api/export/summary` – cached snapshot metrics (totals, health mix, storage usage, latest release).
+- `GET /api/export/history?interval=6h&points=72` – downsampled history suitable for charts.
+- `GET /api/export/nodes?status=healthy&limit=100` – paginated node feed for deeper integrations.
+
+Add `EXPORT_API_TOKEN=shared-secret` to require callers to send `X-Atlas-Token` (or `?atlasToken=`). Responses ship with `Cache-Control: public, s-maxage=60` (history/summary) or `s-maxage=300` (node feed) so you can front them with a CDN. For complete schemas and versioning guarantees, see [docs/export-api.md](docs/export-api.md).
+
+### Embeddable widgets
+
+Hosted consumers can drop iframe-based cards anywhere:
+
+```html
+<iframe
+	src="https://atlas.example.com/embed/summary?token=SHARED_TOKEN"
+	width="420"
+	height="340"
+	loading="lazy"
+	style="border:0;border-radius:24px;overflow:hidden;"
+></iframe>
+```
+
+Each embed broadcasts `postMessage({ type: "xandeum-embed-resize", height })`; add a single listener to auto-resize the iframe:
+
+```html
+<script>
+	window.addEventListener("message", (event) => {
+		if (event.data?.type !== "xandeum-embed-resize") return;
+		document.querySelectorAll("iframe[src*='/embed/']").forEach((frame) => {
+			frame.style.height = `${event.data.height}px`;
+		});
+	});
+</script>
+```
+
+Widgets live at `/embed/summary` and `/embed/history`; both accept the optional `token`, `interval`, and `points` parameters to mirror the Export API. Use them to syndicate Atlas metrics without giving users access to the full dashboard UI.

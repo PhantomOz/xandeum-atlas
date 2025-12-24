@@ -11,13 +11,14 @@ interface RouteParams {
   webhookId: string;
 }
 
-export async function PUT(request: Request, { params }: { params: RouteParams }) {
+export async function PUT(request: Request, context: { params: Promise<RouteParams> }) {
   const userId = resolveUserId(request);
   if (!userId) {
     return NextResponse.json({ error: "Missing x-alert-user header" }, { status: 401 });
   }
 
-  const idResult = alertWebhookSchema.shape.id.safeParse(params.webhookId);
+  const { webhookId: rawWebhookId } = await context.params;
+  const idResult = alertWebhookSchema.shape.id.safeParse(rawWebhookId);
   if (!idResult.success) {
     return NextResponse.json({ error: "Invalid webhook id" }, { status: 400 });
   }
@@ -54,13 +55,14 @@ export async function PUT(request: Request, { params }: { params: RouteParams })
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: RouteParams }) {
+export async function DELETE(request: Request, context: { params: Promise<RouteParams> }) {
   const userId = resolveUserId(request);
   if (!userId) {
     return NextResponse.json({ error: "Missing x-alert-user header" }, { status: 401 });
   }
 
-  const idResult = alertWebhookSchema.shape.id.safeParse(params.webhookId);
+  const { webhookId: rawWebhookId } = await context.params;
+  const idResult = alertWebhookSchema.shape.id.safeParse(rawWebhookId);
   if (!idResult.success) {
     return NextResponse.json({ error: "Invalid webhook id" }, { status: 400 });
   }
