@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SnapshotHistoryEntry } from "@/types/pnode";
 import { formatNumber, formatPercent } from "@/lib/format";
-import { AlertTriangle, RefreshCcw } from "lucide-react";
+import { AlertTriangle, Info, RefreshCcw } from "lucide-react";
 
 type HistoryView = "capacity" | "utilization" | "health";
 const HISTORY_VIEW_STORAGE_KEY = "pnodes:trendView";
@@ -58,7 +58,10 @@ export function HistoricalTrends({ data, isLoading, error, onRefresh, limitOptio
       <header className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
              <p className="text-sm uppercase tracking-[0.2em] text-slate-400">History</p>
-          <h3 className="text-xl font-semibold text-white">Network Trends</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-white">Network Trends</h3>
+            <SectionInfoTooltip text="Track rolling gossip snapshots for capacity, utilization, and health to spot emerging trends." />
+          </div>
           <p className="text-xs text-slate-500">Rolling snapshots for the default discovery rotation.</p>
         </div>
         <div className="flex flex-col gap-3 md:items-end">
@@ -132,6 +135,26 @@ export function HistoricalTrends({ data, isLoading, error, onRefresh, limitOptio
         </dl>
       ) : null}
     </section>
+  );
+}
+
+function SectionInfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        className="rounded-full border border-transparent p-1 text-slate-500 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+        aria-label={text}
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-64 -translate-x-1/2 -translate-y-[140%] rounded-2xl border border-white/10 bg-slate-950/95 px-3 py-2 text-left text-[11px] leading-relaxed text-slate-100 shadow-2xl group-hover:block group-focus-within:block"
+      >
+        {text}
+      </span>
+    </span>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
-import { ArrowUpDown, Check, Copy, Download, Filter, Link2, PenSquare, Plus, X } from "lucide-react";
+import { ArrowUpDown, Check, Copy, Download, Filter, Info, Link2, PenSquare, Plus, X } from "lucide-react";
 import type { PNode } from "@/types/pnode";
 import { abbreviateKey, formatDuration, formatPercent, formatRelativeTimeFromSeconds } from "@/lib/format";
 import { PNodeDrawer } from "./PNodeDrawer";
@@ -722,7 +722,10 @@ export function PNodeTable({ nodes, lastUpdated }: PNodeTableProps) {
 
         <div className="space-y-3 rounded-2xl border border-white/5 bg-slate-950/30 p-4 text-sm text-slate-100">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Saved views & sharing</span>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-slate-400">
+              <span>Saved views & sharing</span>
+              <InlineInfoTooltip text="Bookmark frequent explorer filters and share deep links that reopen to the exact same state." />
+            </div>
             <button
               type="button"
               onClick={handleShareLink}
@@ -917,6 +920,26 @@ function HealthBadge({ score, status }: { score: number; status: PNode["status"]
   return (
     <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-sm font-semibold ${palette}`}>
       {score}
+    </span>
+  );
+}
+
+function InlineInfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        className="rounded-full border border-transparent p-1 text-slate-500 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+        aria-label={text}
+      >
+        <Info className="h-3 w-3" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-0 z-20 hidden w-60 -translate-x-1/2 -translate-y-[140%] rounded-2xl border border-white/10 bg-slate-950/95 px-3 py-2 text-left text-[11px] leading-relaxed text-slate-100 shadow-2xl group-hover:block group-focus-within:block"
+      >
+        {text}
+      </span>
     </span>
   );
 }
