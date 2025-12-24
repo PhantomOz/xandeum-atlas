@@ -92,3 +92,14 @@ export interface PNodeSnapshot {
   fetchedAt: string;
   seed: string;
 }
+
+export interface SnapshotHistoryEntry {
+  timestamp: string;
+  totalNodes: number;
+  usedTb: number;
+  committedTb: number;
+  avgUsagePercent: number;
+  healthy: number;
+  warning: number;
+  critical: number;
+}

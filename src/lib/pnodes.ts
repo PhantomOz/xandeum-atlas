@@ -1,5 +1,6 @@
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { recordSnapshotMetrics } from "@/lib/history";
 import type {
   AnalyticsMetrics,
   PNode,
@@ -70,6 +71,13 @@ export async function getPnodeSnapshot(options?: SnapshotOptions): Promise<PNode
     snapshot,
     expiresAt: now + CACHE_TTL_MS,
   });
+
+  const shouldRecordHistory = cacheKey === "default";
+  if (shouldRecordHistory) {
+    recordSnapshotMetrics(snapshot).catch((error) => {
+      console.error("Failed to append snapshot history", error);
+    });
+  }
 
   return snapshot;
 }

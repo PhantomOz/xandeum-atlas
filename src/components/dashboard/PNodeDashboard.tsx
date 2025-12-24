@@ -2,12 +2,14 @@
 
 import { AlertCircle, RefreshCcw, Satellite } from "lucide-react";
 import { usePnodeData } from "@/hooks/usePnodeData";
+import { useHistoryData } from "@/hooks/useHistoryData";
 import type { PNodeSnapshot } from "@/types/pnode";
 import { SummaryGrid } from "./SummaryGrid";
 import { VersionDistribution } from "./VersionDistribution";
 import { UsageBands } from "./UsageBands";
 import { StatusPanel } from "./StatusPanel";
 import { StorageLeaders } from "./StorageLeaders";
+import { HistoricalTrends } from "./HistoricalTrends";
 import { PNodeTable } from "../table/PNodeTable";
 import { SeedControls } from "./SeedControls";
 
@@ -17,6 +19,7 @@ interface DashboardProps {
 
 export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
   const { snapshot, refresh, isRefreshing, error, seedPreference } = usePnodeData(initialSnapshot);
+  const { history, isLoading: historyLoading, error: historyError, refresh: refreshHistory } = useHistoryData({ limit: 72, refreshInterval: 120000 });
 
   if (!snapshot) {
     return (
@@ -100,6 +103,8 @@ export function PNodeDashboard({ initialSnapshot }: DashboardProps) {
         <UsageBands data={snapshot.metrics.usageBuckets} />
         <StatusPanel metrics={snapshot.metrics} />
       </div>
+
+      <HistoricalTrends data={history} isLoading={historyLoading} error={historyError} onRefresh={refreshHistory} />
 
       <StorageLeaders leaders={snapshot.metrics.storageLeaders} />
 

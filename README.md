@@ -11,6 +11,7 @@ Live analytics for the Xandeum pNode network. The dashboard ingests gossip data 
 - Auto-refresh (30s) with manual override
 - In-app seed override panel to target any custom gossip scouts
 - Slide-over inspector per node with raw JSON export
+- Rolling history capture with trend chart (stored locally under `data/pnode-history.json`)
 
 ### Getting Started
 
@@ -31,6 +32,7 @@ PNODE_RPC_PORT=6000
 PNODE_CACHE_TTL=25000           # ms
 PNODE_REQUEST_TIMEOUT=7000      # ms
 PNODE_STALE_SECONDS=1800        # mark nodes stale after 30 min
+PNODE_HISTORY_LIMIT=288         # max snapshots to persist for trends
 ```
 
 You can point the app at custom seeds (IP or hostnames) either via the `.env` above or through the "Discovery list" control in the UI (comma-separated). The server-side fetcher will try `get-pods-with-stats`, fall back to `get-pods`, deduplicate nodes by pubkey, and cache the snapshot for `PNODE_CACHE_TTL` ms per discovery list.
@@ -43,4 +45,4 @@ You can point the app at custom seeds (IP or hostnames) either via the `.env` ab
 
 ### Deployment
 
-Any Node 18+ target works (Vercel, Netlify, self-hosted). Ensure outbound access to your chosen pNode seeds over HTTP/6000 and configure the environment variables above.
+Any Node 18+ target works (Vercel, Netlify, self-hosted). Ensure outbound access to your chosen pNode seeds over HTTP/6000 and configure the environment variables above. Historical data is persisted to `data/pnode-history.json`; if you deploy to a stateless host, point that path to a writable volume or replace it with an external store.
