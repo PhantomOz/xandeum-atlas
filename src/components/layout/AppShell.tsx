@@ -1,4 +1,4 @@
-import { BellRing } from "lucide-react";
+import { BellRing, BookOpen, LayoutPanelLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -16,7 +16,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="relative mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-8 lg:px-12 lg:py-14 xl:px-16 xl:py-20">
           <div className="rounded-[32px] border border-white/5 bg-slate-950/70 p-6 shadow-[0_40px_120px_rgba(2,6,23,0.65)] backdrop-blur-xl sm:p-8">
             <div className="mb-10 flex flex-col gap-5 border-b border-white/5 pb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-4">
                 <div className="relative h-12 w-12 sm:h-14 sm:w-14">
                   <Image src="/xandeum-logo.svg" alt="Xandeum" width={80} height={80} priority className="h-full w-full" />
                 </div>
@@ -24,18 +24,32 @@ export function AppShell({ children }: AppShellProps) {
                   <p className="text-xs uppercase tracking-[0.45em] text-emerald-300">Xandeum</p>
                   <p className="text-lg font-semibold text-white">pNode Atlas</p>
                 </div>
-              </div>
+              </Link>
               <div className="flex flex-col gap-3 text-sm text-slate-400 sm:max-w-md sm:text-right">
                 <p>Operational telemetry for the distributed storage network — crafted for operators who need desktop-grade insight.</p>
-                <div className="flex justify-start gap-3 sm:justify-end">
+                <nav className="flex flex-wrap justify-start gap-2 text-xs sm:justify-end">
                   <Link
                     href="/alerts"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-white transition hover:border-emerald-400"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold uppercase tracking-[0.35em] text-white transition hover:border-emerald-400"
                   >
                     <BellRing className="h-3.5 w-3.5 text-emerald-300" />
                     Alerts
                   </Link>
-                </div>
+                  <Link
+                    href="/guide"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold uppercase tracking-[0.35em] text-white transition hover:border-emerald-400"
+                  >
+                    <BookOpen className="h-3.5 w-3.5 text-emerald-300" />
+                    Guide
+                  </Link>
+                  <Link
+                    href="/embed/summary"
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 font-semibold uppercase tracking-[0.35em] text-white transition hover:border-emerald-400"
+                  >
+                    <LayoutPanelLeft className="h-3.5 w-3.5 text-emerald-300" />
+                    Embeds
+                  </Link>
+                </nav>
               </div>
             </div>
             {children}
